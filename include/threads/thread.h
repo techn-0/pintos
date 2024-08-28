@@ -152,5 +152,6 @@ bool compare_thread_ticks(const struct list_elem *a, const struct list_elem *b, 
 void thread_wakeup(int64_t global_ticks);
 bool compare_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void check_preemption(void);
+bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 #endif /* threads/thread.h */

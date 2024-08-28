@@ -68,6 +68,7 @@ void sema_down(struct semaphore *sema)
 	while (sema->value == 0)
 	{
 		// list_push_back (&sema->waiters, &thread_current ()->elem); // 원래 방식은 또 FIFO네
+		// priority기준으로 정렬되게 하자!
 		list_insert_ordered(&sema->waiters, &thread_current()->elem, compare_thread_priority, NULL);
 		thread_block(); // 스레드 대기상태로
 	}
@@ -117,7 +118,7 @@ void sema_up(struct semaphore *sema)
 		thread_unblock(list_entry(list_pop_front(&sema->waiters), struct thread, elem));
 	}
 	sema->value++;
-	check_preemption();
+	check_preemption(); // 추가: 현재 쓰레드와 대기 리스트 스레드의 우선순위 비교
 	intr_set_level(old_level);
 }
 
@@ -289,6 +290,7 @@ void cond_wait(struct condition *cond, struct lock *lock)
 	ASSERT(lock_held_by_current_thread(lock));
 
 	sema_init(&waiter.semaphore, 0);
+	// list_push_back (&cond->waiters, &waiter.elem); // 이것도 FIFO
 	list_insert_ordered(&cond->waiters, &waiter.elem, compare_sema_priority, NULL);
 	lock_release(lock);
 	sema_down(&waiter.semaphore);
@@ -308,10 +310,11 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED)
 	ASSERT(lock != NULL);
 	ASSERT(!intr_context());
 	ASSERT(lock_held_by_current_thread(lock));
+	
 
 	if (!list_empty(&cond->waiters))
 	{
-		list_sort(&cond->waiters, compare_sema_priority, NULL);
+		list_sort(&cond->waiters, compare_sema_priority, NULL); //  리스트 우선순위로 정렬
 		sema_up(&list_entry(list_pop_front(&cond->waiters), struct semaphore_elem, elem)->semaphore);
 	}
 }
@@ -334,14 +337,14 @@ void cond_broadcast(struct condition *cond, struct lock *lock)
 // 추가
 bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
+	// 세마포어 구조체로 변경
 	struct semaphore_elem *sema_a = list_entry(a, struct semaphore_elem, elem);
 	struct semaphore_elem *sema_b = list_entry(b, struct semaphore_elem, elem);
-
+	// 대기 리스트 가져옴
 	struct list *waiters_a = &(sema_a->semaphore.waiters);
 	struct list *waiters_b = &(sema_b->semaphore.waiters);
-
+	// 리스트 첫 원소
 	struct thread *root_a = list_entry(list_begin(waiters_a), struct thread, elem);
 	struct thread *root_b = list_entry(list_begin(waiters_b), struct thread, elem);
-
-	return root_a->priority > root_b->priority;
+	return root_a->priority > root_b->priority; // 비교
 }
