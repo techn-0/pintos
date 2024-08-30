@@ -4,14 +4,15 @@ Kernel command line: -q run alarm-negative
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  209,510,400 loops/s.
+Calibrating timer...  157,081,600 loops/s.
 Boot complete.
 Executing 'alarm-negative':
-Kernel PANIC at ../../tests/threads/tests.c:60 in run_test(): no test named "alarm-negative"
-Call stack: 0x80042135d4 0x8004216a82 0x8004206636 0x8004206783 0x8004206120.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 21 ticks
-Thread: 0 idle ticks, 21 kernel ticks, 0 user ticks
-Console: 
+(alarm-negative) begin
+(alarm-negative) PASS
+(alarm-negative) end
+Execution of 'alarm-negative' complete.
+Timer: 23 ticks
+Thread: 1 idle ticks, 22 kernel ticks, 0 user ticks
+Console: 449 characters output
+Keyboard: 0 keys pressed
+Powering off...

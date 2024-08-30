@@ -98,6 +98,12 @@ struct thread
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem; /* List element. */
 
+	// 추가
+	int init_priority;				// 원래 우선순위로 돌아와야 하니 원래 우선순위를 담아둘거임
+	struct lock *wait_on_lock;		// 현재 획득하려고 기다리고 있는 락
+	struct list donations;			// 나에게 우선순위를 도네이트한 다른 스레드들의 목록
+	struct list_elem donation_elem; // 스레드가 도네이션 리스트에 추가될 때, 이 donation_elem을 통해 리스트에 연결
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */
@@ -153,5 +159,9 @@ void thread_wakeup(int64_t global_ticks);
 bool compare_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void check_preemption(void);
 bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool compare_donation_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+void donate_priority(void);
+void remove_donor(struct lock *lock);
+void update_priority_before_donations(void);
 
 #endif /* threads/thread.h */

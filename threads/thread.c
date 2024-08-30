@@ -180,8 +180,7 @@ void thread_print_stats(void)
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-tid_t thread_create(const char *name, int priority,
-					thread_func *function, void *aux)
+tid_t thread_create(const char *name, int priority, thread_func *function, void *aux)
 {
 	struct thread *t;
 	tid_t tid;
@@ -331,7 +330,8 @@ void thread_yield(void)
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority(int new_priority)
 {
-	thread_current()->priority = new_priority;
+	thread_current()->init_priority = new_priority;
+	update_priority_before_donations();
 	check_preemption();
 }
 
@@ -433,6 +433,10 @@ init_thread(struct thread *t, const char *name, int priority)
 	t->tf.rsp = (uint64_t)t + PGSIZE - sizeof(void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	// 추가
+	t->init_priority = priority;
+	t->wait_on_lock = NULL;
+	list_init(&(t->donations));
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -658,8 +662,8 @@ void thread_wakeup(int64_t current_ticks)
 		if (current_ticks >= curr_thread->wakeup_ticks) // 깰 시간이 됐으면
 		{
 			curr_elem = list_remove(curr_elem); // sleep_list에서 제거, curr_elem에는 다음 elem이 담김
-			thread_unblock(curr_thread); // ready_list로 이동
-			check_preemption(); // 추가
+			thread_unblock(curr_thread);		// ready_list로 이동
+			check_preemption();					// 추가
 		}
 		else
 			break;

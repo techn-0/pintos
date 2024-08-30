@@ -194,8 +194,20 @@ void lock_acquire(struct lock *lock)
 	ASSERT(lock != NULL);
 	ASSERT(!intr_context());
 	ASSERT(!lock_held_by_current_thread(lock));
+	// 추가
+	struct thread *curr = thread_current(); // 실행중인 쓰레드 가져옴
+	if (lock->holder != NULL)				// 이미 점유일때
+	{
+		curr->wait_on_lock = lock; // 획득을 시도하지만 아직 획득하지 못한 락 저장(나중에 도네이션이 발생할 때, 이 스레드가 어떤 락을 기다리고 있었는지 추적하기 위해)
+		list_insert_ordered(&lock->holder->donations, &curr->donation_elem, compare_donation_priority, NULL);
+		// 현재 스레드를 락의 소유자의 도네이션 리스트에 추가
+		donate_priority(); // 현재 스레드의 우선순위를 락을 소유한 스레드에게 도네이트
+	}
 
 	sema_down(&lock->semaphore);
+
+	curr->wait_on_lock = NULL; // 추가: 락을 얻었을때 필요한 락이 없는 상태로
+
 	lock->holder = thread_current();
 }
 
@@ -228,7 +240,10 @@ void lock_release(struct lock *lock)
 {
 	ASSERT(lock != NULL);
 	ASSERT(lock_held_by_current_thread(lock));
-
+	// 추가
+	remove_donor(lock);				 // 락 해제하면서 락 대기 리스트 에서 현재 쓰레드 제거
+	update_priority_before_donations(); // 도네이션으로 변경된 우선순위 업데이트
+	//------------------------------
 	lock->holder = NULL;
 	sema_up(&lock->semaphore);
 }
@@ -310,7 +325,6 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED)
 	ASSERT(lock != NULL);
 	ASSERT(!intr_context());
 	ASSERT(lock_held_by_current_thread(lock));
-	
 
 	if (!list_empty(&cond->waiters))
 	{
@@ -347,4 +361,67 @@ bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b,
 	struct thread *root_a = list_entry(list_begin(waiters_a), struct thread, elem);
 	struct thread *root_b = list_entry(list_begin(waiters_b), struct thread, elem);
 	return root_a->priority > root_b->priority; // 비교
+}
+
+// donation_elem을 우선순위 기준으로 정렬하는 함수를 만들자
+bool compare_donation_priority(const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+	struct thread *st_a = list_entry(a, struct thread, donation_elem);
+	struct thread *st_b = list_entry(b, struct thread, donation_elem);
+	return st_a->priority > st_b->priority;
+}
+
+void donate_priority(void)
+{
+	struct thread *curr = thread_current(); // 검사중인 스레드
+	struct thread *holder;					// 현재 쓰레드가 원하는 락을 점유한 스레드
+
+	int priority = curr->priority; // 현재 스레드 우선순위 저장
+
+	for (int i = 0; i < 8; i++)
+	{
+		if (curr->wait_on_lock == NULL) // 현재 스레드가 기다리는 락이 없음 종료
+			return;
+		holder = curr->wait_on_lock->holder; // 원래 락 소유자
+		holder->priority = priority;		 // 락 소유자의 우선순위를 내꺼로
+		curr = holder;						 // 현재 쓰레드를 락 소유자로
+	}
+}
+
+void remove_donor(struct lock *lock)
+{
+	struct list *donations = &(thread_current()->donations); // 현재 스레드 donations 리스트
+	struct list_elem *donor_elem;							 // 도네이션 리스트 요소 담을거
+	struct thread *donor_thread;							 // donations 리스트에서 꺼낼 쓰레드 담을변수
+
+	if (list_empty(donations)) // 비어있음 종료
+		return;
+
+	donor_elem = list_front(donations); // donations 리스트 첫 번째 요소
+
+	while (1)
+	{
+		donor_thread = list_entry(donor_elem, struct thread, donation_elem); // 현재 요소의 스레드 구조체 가져옴
+		if (donor_thread->wait_on_lock == lock)								 // 현재 스레드가 기다리는 락괴 주어진 락이 같으면
+			list_remove(&donor_thread->donation_elem);						 // donations리스트에서 제거
+		donor_elem = list_next(donor_elem);									 // 다음 요소로
+		if (donor_elem == list_end(donations))								 // 다 돌았음 종료
+			return;
+	}
+}
+
+void update_priority_before_donations(void)
+{
+    struct thread *curr = thread_current(); // 현재 쓰레드
+    struct list *donations = &(thread_current()->donations); // 쓰레드의 도네이션 리스트
+    struct thread *donations_root;// 도네이션리스트의 첫 원소 저장할 거
+
+    if (list_empty(donations)) // 도네이션 리스트가 비었으면
+    {
+        curr->priority = curr->init_priority; // 처음 priority로 돌아가
+        return;
+    }
+
+    donations_root = list_entry(list_front(donations), struct thread, donation_elem);
+    curr->priority = donations_root->priority; // 쓰레드의 우선순위를 donations_root의 우선순위로
 }
