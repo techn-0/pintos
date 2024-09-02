@@ -189,24 +189,45 @@ void lock_init(struct lock *lock)
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
+// void lock_acquire(struct lock *lock)
+// {
+// 	ASSERT(lock != NULL);
+// 	ASSERT(!intr_context());
+// 	ASSERT(!lock_held_by_current_thread(lock));
+// 	// 추가
+// 	struct thread *curr = thread_current(); // 실행중인 쓰레드 가져옴
+// 	if (lock->holder != NULL)				// 이미 점유일때
+// 	{
+// 		curr->wait_on_lock = lock; // 획득을 시도하지만 아직 획득하지 못한 락 저장(나중에 도네이션이 발생할 때, 이 스레드가 어떤 락을 기다리고 있었는지 추적하기 위해)
+// 		// list_insert_ordered(&lock->holder->donations, &curr->donation_elem, compare_donation_priority, NULL);
+// 		list_push_back(&lock->holder->donations, &curr->donation_elem); // 추가 AS
+// 		// 현재 스레드를 락의 소유자의 도네이션 리스트에 추가
+// 		donate_priority(); // 현재 스레드의 우선순위를 락을 소유한 스레드에게 도네이트
+// 	}
+
+// 	sema_down(&lock->semaphore);
+
+// 	curr->wait_on_lock = NULL; // 추가: 락을 얻었을때 필요한 락이 없는 상태로
+
+// 	lock->holder = thread_current();
+// }
 void lock_acquire(struct lock *lock)
 {
 	ASSERT(lock != NULL);
 	ASSERT(!intr_context());
 	ASSERT(!lock_held_by_current_thread(lock));
-	// 추가
-	struct thread *curr = thread_current(); // 실행중인 쓰레드 가져옴
-	if (lock->holder != NULL)				// 이미 점유일때
+	struct thread *curr = thread_current();
+
+	if (lock->holder != NULL)
 	{
-		curr->wait_on_lock = lock; // 획득을 시도하지만 아직 획득하지 못한 락 저장(나중에 도네이션이 발생할 때, 이 스레드가 어떤 락을 기다리고 있었는지 추적하기 위해)
+		curr->wait_on_lock = lock;
+
 		list_insert_ordered(&lock->holder->donations, &curr->donation_elem, compare_donation_priority, NULL);
-		// 현재 스레드를 락의 소유자의 도네이션 리스트에 추가
-		donate_priority(); // 현재 스레드의 우선순위를 락을 소유한 스레드에게 도네이트
+		if (!thread_mlfqs)
+			donate_priority();
 	}
-
 	sema_down(&lock->semaphore);
-
-	curr->wait_on_lock = NULL; // 추가: 락을 얻었을때 필요한 락이 없는 상태로
+	curr->wait_on_lock = NULL;
 
 	lock->holder = thread_current();
 }
@@ -236,15 +257,30 @@ bool lock_try_acquire(struct lock *lock)
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
    handler. */
+// void lock_release(struct lock *lock)
+// {
+// 	ASSERT(lock != NULL);
+// 	ASSERT(lock_held_by_current_thread(lock));
+
+// 	lock->holder = NULL;
+// 	// 추가
+// 	remove_donor(lock);					// 락 해제하면서 락 대기 리스트 에서 현재 쓰레드 제거
+// 	update_priority_before_donations(); // 도네이션으로 변경된 우선순위 업데이트
+// 	//------------------------------
+
+// 	sema_up(&lock->semaphore);
+// }
 void lock_release(struct lock *lock)
 {
 	ASSERT(lock != NULL);
 	ASSERT(lock_held_by_current_thread(lock));
-	// 추가
-	remove_donor(lock);				 // 락 해제하면서 락 대기 리스트 에서 현재 쓰레드 제거
-	update_priority_before_donations(); // 도네이션으로 변경된 우선순위 업데이트
-	//------------------------------
+
 	lock->holder = NULL;
+	if (!thread_mlfqs)
+	{
+		remove_donor(lock);					// 락 해제하면서 락 대기 리스트 에서 현재 쓰레드 제거
+		update_priority_before_donations(); // 도네이션으로 변경된 우선순위 업데이트
+	}
 	sema_up(&lock->semaphore);
 }
 
@@ -412,16 +448,16 @@ void remove_donor(struct lock *lock)
 
 void update_priority_before_donations(void)
 {
-    struct thread *curr = thread_current(); // 현재 쓰레드
-    struct list *donations = &(thread_current()->donations); // 쓰레드의 도네이션 리스트
-    struct thread *donations_root;// 도네이션리스트의 첫 원소 저장할 거
+	struct thread *curr = thread_current();					 // 현재 쓰레드
+	struct list *donations = &(thread_current()->donations); // 쓰레드의 도네이션 리스트
+	struct thread *donations_root;							 // 도네이션리스트의 첫 원소 저장할 거
 
-    if (list_empty(donations)) // 도네이션 리스트가 비었으면
-    {
-        curr->priority = curr->init_priority; // 처음 priority로 돌아가
-        return;
-    }
+	if (list_empty(donations)) // 도네이션 리스트가 비었으면
+	{
+		curr->priority = curr->init_priority; // 처음 priority로 돌아가
+		return;
+	}
 
-    donations_root = list_entry(list_front(donations), struct thread, donation_elem);
-    curr->priority = donations_root->priority; // 쓰레드의 우선순위를 donations_root의 우선순위로
+	donations_root = list_entry(list_front(donations), struct thread, donation_elem);
+	curr->priority = donations_root->priority; // 쓰레드의 우선순위를 donations_root의 우선순위로
 }
