@@ -225,6 +225,7 @@ int read(int fd, void *buffer, unsigned length) // 열린 파일의 데이터를
 	return bytes;
 }
 
+
 int write(int fd, const void *buffer, unsigned length) // 열린 파일 데이터 기록 sys-call
 {
 	check_address(buffer);

@@ -83,23 +83,23 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 {
 	struct thread *curr = thread_current();
 
-    struct intr_frame *f = (pg_round_up(rrsp()) - sizeof(struct intr_frame));  // 현재 쓰레드의 if_는 페이지 마지막에 붙어있다.
-    memcpy(&curr->parent_if, f, sizeof(struct intr_frame));                    // 1. 부모를 찾기 위해서 2. do_fork에 전달해주기 위해서
+	struct intr_frame *f = (pg_round_up(rrsp()) - sizeof(struct intr_frame)); // 현재 쓰레드의 if_는 페이지 마지막에 붙어있다.
+	memcpy(&curr->parent_if, f, sizeof(struct intr_frame));					  // 1. 부모를 찾기 위해서 2. do_fork에 전달해주기 위해서
 
-    /* 현재 스레드를 새 스레드로 복제합니다.*/
-    tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, curr);
+	/* 현재 스레드를 새 스레드로 복제합니다.*/
+	tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, curr);
 
-    if (tid == TID_ERROR)
-        return TID_ERROR;
+	if (tid == TID_ERROR)
+		return TID_ERROR;
 
-    struct thread *child = get_child_process(tid);
+	struct thread *child = get_child_process(tid);
 
-    sema_down(&child->fork_sema);  // 생성만 해놓고 자식 프로세스가 __do_fork에서 fork_sema를 sema_up 해줄 때까지 대기
+	sema_down(&child->fork_sema); // 생성만 해놓고 자식 프로세스가 __do_fork에서 fork_sema를 sema_up 해줄 때까지 대기
 
-    if (child->exit_status == TID_ERROR)
-        return TID_ERROR;
+	if (child->exit_status == TID_ERROR)
+		return TID_ERROR;
 
-    return tid;  // 부모 프로세스의 리턴값 : 생성한 자식 프로세스의 tid
+	return tid; // 부모 프로세스의 리턴값 : 생성한 자식 프로세스의 tid
 }
 
 #ifndef VM
@@ -312,6 +312,7 @@ int process_wait(tid_t child_tid UNUSED)
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	struct thread *curr = thread_current ();
 	struct thread *child = get_child_process(child_tid);
 	if (child == NULL)
 		return -1;
@@ -716,41 +717,28 @@ install_page(void *upage, void *kpage, bool writable)
 }
 
 // 휘건 추가
-// 현재 스레드 fdt에 파일 추가
-int process_add_file(struct file *f) 
-{
-    struct thread *curr = thread_current();
-    struct file **fdt = curr->fdt;
-
-    if (curr->fd_idx >= FDCOUNT_LIMIT)
-        return -1;
-
-    fdt[curr->fd_idx++] = f;
-
-    return curr->fd_idx - 1;
-}
 
 // 현재 스레드의 fd번째 파일 정보 얻기
-struct file *process_get_file(int fd) 
+struct file *process_get_file(int fd)
 {
-    struct thread *curr = thread_current();
+	struct thread *curr = thread_current();
 
-    if (fd >= FDCOUNT_LIMIT)
-        return NULL;
+	if (fd >= FDCOUNT_LIMIT)
+		return NULL;
 
-    return curr->fdt[fd];
+	return curr->fdt[fd];
 }
 
 // 현재 스레드의 fdt에서 파일 삭제
-int process_close_file(int fd) 
+int process_close_file(int fd)
 {
-    struct thread *curr = thread_current();
+	struct thread *curr = thread_current();
 
-    if (fd >= FDCOUNT_LIMIT)
-        return -1;
+	if (fd >= FDCOUNT_LIMIT)
+		return -1;
 
-    curr->fdt[fd] = NULL;
-    return 0;
+	curr->fdt[fd] = NULL;
+	return 0;
 }
 
 struct thread *get_child_process(int pid)
@@ -769,28 +757,41 @@ struct thread *get_child_process(int pid)
 	return NULL;
 }
 
-
 // -----------------------
+// 현재 스레드 fdt에 파일 추가
+// int process_add_file(struct file *f)
+// {
+// 	struct thread *curr = thread_current();
+// 	struct file **fdt = curr->fdt;
+
+// 	if (curr->fd_idx >= FDCOUNT_LIMIT)
+// 		return -1;
+
+// 	fdt[curr->fd_idx++] = f;
+
+// 	return curr->fd_idx - 1;
+// }
+
 int add_file_to_fdt(struct file *file)
 {
-	struct thread *cur = thread_current();
-	struct file **fdt = cur->fdt; // file descriptor table
+	struct thread *curr = thread_current();
+	struct file **fdt = curr->fdt; // file descriptor table
 
 	/* Project2-extra - (multi-oom) Find open spot from the front
-	 *  1. 확보가능한 fd 번호 (fdIdx)가 limit 보다 작고, 
+	 *  1. 확보가능한 fd 번호 (fdIdx)가 limit 보다 작고,
 	 *  2. fdt[x] 에 값이 있다면 while문 계속 진행
-	 * 결과적으로 fdt[x]가 NULL값을 리턴 할 때 while 문을 탈출한다. = 빈 자리. */ 
-	while ((cur->fd_idx < FDCOUNT_LIMIT) && fdt[cur->fd_idx])
-		cur->fd_idx++;
+	 * 결과적으로 fdt[x]가 NULL값을 리턴 할 때 while 문을 탈출한다. = 빈 자리. */
+	while ((curr->fd_idx < FDCOUNT_LIMIT) && fdt[curr->fd_idx])
+		curr->fd_idx++;
 
 	// Error - fdt full
-	if (cur->fd_idx >= FDCOUNT_LIMIT)
+	if (curr->fd_idx >= FDCOUNT_LIMIT)
 		return -1;
 
 	// 빈 fd에 file의 주소를 기록해준다.
-	fdt[cur->fd_idx] = file;
+	fdt[curr->fd_idx] = file;
 
-	return cur->fd_idx;
+	return curr->fd_idx;
 }
 
 #else
