@@ -18,8 +18,8 @@ Executing 'close-twice':
 (close-twice) close "sample.txt"
 close-twice: exit(-1)
 Execution of 'close-twice' complete.
-Timer: 58 ticks
-Thread: 35 idle ticks, 22 kernel ticks, 1 user ticks
+Timer: 60 ticks
+Thread: 36 idle ticks, 22 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 111 reads, 248 writes
 hd1:0: 105 reads, 0 writes

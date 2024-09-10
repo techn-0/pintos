@@ -5,9 +5,14 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h" // 휘건 추가
+
 #ifdef VM
 #include "vm/vm.h"
 #endif
+// 휘건 추가
+#define USERPROG
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -27,6 +32,14 @@ typedef int tid_t;
 #define PRI_MIN 0	   /* Lowest priority. */
 #define PRI_DEFAULT 31 /* Default priority. */
 #define PRI_MAX 63	   /* Highest priority. */
+// 추가 AS
+#define NICE_DEFAULT 0
+#define RECENT_CPU_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
+// 휘건 추가
+#define FDT_PAGES 3 // test `multi-oom` 테스트용
+#define FDCOUNT_LIMIT FDT_PAGES * (1 << 9)
+
 
 /* A kernel thread or user process.
  *
@@ -103,10 +116,30 @@ struct thread
 	struct lock *wait_on_lock;		// 현재 획득하려고 기다리고 있는 락
 	struct list donations;			// 나에게 우선순위를 도네이트한 다른 스레드들의 목록
 	struct list_elem donation_elem; // 스레드가 도네이션 리스트에 추가될 때, 이 donation_elem을 통해 리스트에 연결
+	// 추가 AS
+	int niceness;
+	int recent_cpu;
+	struct list_elem all_elem;
+	//
+	// struct file *runn_file; // 실행중인 파일
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */
+	// 휘건 추가
+	int exit_status;   // exit(), wait() 에 사용할 변수 선언
+	
+	int fd_idx;              // 파일 디스크립터 인덱스
+    struct file **fdt;       // 파일 디스크립터 테이블
+	struct file *runn_file;  // 실행중인 파일
+	
+	// struct file *runn_file; // 실행중인 파일
+	struct intr_frame parent_if; // 부모 프로세스 if
+	struct list child_list;
+	struct list_elem child_elem;
+	struct semaphore fork_sema; // fork가 완료될 때 signal
+	struct semaphore exit_sema; // 자식 프로세스 종료 signal
+	struct semaphore wait_sema; // exit_sema를 기다릴 때 사용
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -163,5 +196,13 @@ bool compare_donation_priority(const struct list_elem *a, const struct list_elem
 void donate_priority(void);
 void remove_donor(struct lock *lock);
 void update_priority_before_donations(void);
+
+// 추가 AS
+void mlfqs_priority(struct thread *t);
+void mlfqs_recent_cpu(struct thread *t);
+void mlfqs_load_avg(void);
+void mlfqs_increment(void);
+void mlfqs_recalc_recent_cpu(void);
+void mlfqs_recalc_priority(void);
 
 #endif /* threads/thread.h */

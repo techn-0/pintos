@@ -19,8 +19,8 @@ Executing 'exec-read':
 (exec-read) read "sample.txt" first 20 bytes
 exec-read: exit(-1)
 Execution of 'exec-read' complete.
-Timer: 63 ticks
-Thread: 38 idle ticks, 24 kernel ticks, 1 user ticks
+Timer: 68 ticks
+Thread: 38 idle ticks, 28 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 143 reads, 506 writes
 hd1:0: 229 reads, 0 writes
