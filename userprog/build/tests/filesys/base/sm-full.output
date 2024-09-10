@@ -18,8 +18,8 @@ Executing 'sm-full':
 (sm-full) writing "quux"
 sm-full: exit(-1)
 Execution of 'sm-full' complete.
-Timer: 61 ticks
-Thread: 34 idle ticks, 25 kernel ticks, 2 user ticks
+Timer: 59 ticks
+Thread: 34 idle ticks, 24 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 107 reads, 264 writes
 hd1:0: 106 reads, 0 writes

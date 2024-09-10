@@ -13,5 +13,16 @@ Boot complete.
 Putting 'multi-oom' into the file system...
 Executing 'multi-oom':
 (multi-oom) begin
-child_1_O: exit(-1)
-TIMEOUT
+child_0_O: exit(-1)
+(multi-oom) Should return > 0.: FAILED
+multi-oom: exit(1)
+Execution of 'multi-oom' complete.
+Timer: 59 ticks
+Thread: 34 idle ticks, 25 kernel ticks, 0 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 144 reads, 242 writes
+hd1:0: 107 reads, 0 writes
+Console: 884 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

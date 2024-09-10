@@ -19,8 +19,8 @@ Executing 'syn-read':
 (syn-read) write "data"
 syn-read: exit(-1)
 Execution of 'syn-read' complete.
-Timer: 66 ticks
-Thread: 42 idle ticks, 22 kernel ticks, 2 user ticks
+Timer: 65 ticks
+Thread: 38 idle ticks, 25 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 137 reads, 502 writes
 hd1:0: 225 reads, 0 writes

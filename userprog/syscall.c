@@ -14,7 +14,6 @@
 #include <string.h>
 typedef int pid_t;
 
-
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
 // 휘건 추가
@@ -160,22 +159,45 @@ int open(const char *file) // 파일 열기 sys-call
 	// 	file_close(newfile);
 
 	// return fd;
+	//------
+	// check_address(file);
+	// // Opens the file with the given NAME. returns the new file if successful or a null pointer otherwise.
+	// struct file *newfile = filesys_open(file);
+
+	// // fails if no file named NAME exists, or if an internal memory allocation fails.
+	// if (newfile == NULL)
+	// 	return -1;
+
+	// // allocate file to current process fdt
+	// int fd = add_file_to_fdt(newfile);
+
+	// // FD table full
+	// if (fd == -1)
+	// 	file_close(newfile);
+
+	// return fd;
+	//----
 	check_address(file);
-	//Opens the file with the given NAME. returns the new file if successful or a null pointer otherwise.
 	struct file *newfile = filesys_open(file);
 
 	// fails if no file named NAME exists, or if an internal memory allocation fails.
 	if (newfile == NULL)
 		return -1;
-
-	//allocate file to current process fdt
-	int fd = add_file_to_fdt(newfile);
-
-	// FD table full
-	if (fd == -1)
+	else
+	{
+		struct thread *t = thread_current();
+		int fd;
+		for (fd = 3; fd < 32; fd++)
+		{
+			if (t->fdt[fd] == NULL)
+			{
+				t->fdt[fd] = newfile;
+				return fd;
+			}
+		}
 		file_close(newfile);
-
-	return fd;
+		return -1;
+	}
 }
 
 int filesize(int fd) // 파일 크기 sys-call
@@ -224,7 +246,6 @@ int read(int fd, void *buffer, unsigned length) // 열린 파일의 데이터를
 
 	return bytes;
 }
-
 
 int write(int fd, const void *buffer, unsigned length) // 열린 파일 데이터 기록 sys-call
 {

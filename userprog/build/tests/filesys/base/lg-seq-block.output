@@ -18,8 +18,8 @@ Executing 'lg-seq-block':
 (lg-seq-block) writing "noodle"
 lg-seq-block: exit(-1)
 Execution of 'lg-seq-block' complete.
-Timer: 62 ticks
-Thread: 39 idle ticks, 22 kernel ticks, 1 user ticks
+Timer: 61 ticks
+Thread: 35 idle ticks, 22 kernel ticks, 4 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 106 reads, 400 writes
 hd1:0: 106 reads, 0 writes

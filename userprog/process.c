@@ -723,7 +723,7 @@ struct file *process_get_file(int fd)
 {
 	struct thread *curr = thread_current();
 
-	if (fd >= FDCOUNT_LIMIT)
+	if (fd < 0 || fd >= FDCOUNT_LIMIT)
 		return NULL;
 
 	return curr->fdt[fd];
