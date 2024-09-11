@@ -142,11 +142,13 @@ page_fault(struct intr_frame *f)
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
 
-	if (not_present || user)
-	{
-		/* 휘건 추가 */
-		exit(-1);
-	}
+	exit(-1);
+
+	// if (not_present || user)
+	// {
+	// 	/* 민경 추가 */
+	// 	exit(-1);
+	// }
 
 #ifdef VM
 	/* For project 3 and later. */

@@ -10,6 +10,7 @@
 
 #include "filesys/off_t.h"
 #include "filesys/file.h"
+#include "filesys/filesys.h" // 준용 추가
 #include "threads/palloc.h"
 #include <string.h>
 
@@ -217,7 +218,8 @@ int open(const char *file) // 파일 열기 sys-call
 	// 	file_close(newfile);
 
 	// return fd;
-	//----
+
+	//----29
 	check_address(file);
 	struct file *newfile = filesys_open(file);
 
@@ -253,61 +255,62 @@ int filesize(int fd) // 파일 크기 sys-call
 
 int read(int fd, void *buffer, unsigned length) // 열린 파일의 데이터를 읽기 sys-call
 {
-	// 	check_address(buffer);
-
-	// 	if (fd == 0)
-	// 	{			   // 0(stdin) -> keyboard로 직접 입력
-	// 		int i = 0; // 쓰레기 값 return 방지
-	// 		char c;
-	// 		unsigned char *buf = buffer;
-
-	// 		for (; i < length; i++)
-	// 		{
-	// 			c = input_getc();
-	// 			*buf++ = c;
-	// 			if (c == '\0')
-	// 				break;
-	// 		}
-
-	// 		return i;
-	// 	}
-	// 	// 그 외의 경우
-	// 	if (fd < 3) // stdout, stderr를 읽으려고 할 경우 & fd가 음수일 경우
-	// 		return -1;
-
-	// 	struct file *file = process_get_file(fd);
-	// 	off_t bytes = -1;
-
-	// 	if (file == NULL) // 파일이 비어있을 경우
-	// 		return -1;
-
-	// 	lock_acquire(&filesys_lock);
-	// 	bytes = file_read(file, buffer, length);
-	// 	lock_release(&filesys_lock);
-
-	// 	return bytes;
-
-	if (fd == 0)
-		return;
 	check_address(buffer);
 
-	struct thread *curr = thread_current();
-	int bytes = 0;
-
 	if (fd == 0)
-	{
-		bytes = input_getc();
+	{			   // 0(stdin) -> keyboard로 직접 입력
+		int i = 0; // 쓰레기 값 return 방지
+		char c;
+		unsigned char *buf = buffer;
+
+		for (; i < length; i++)
+		{
+			c = input_getc();
+			*buf++ = c;
+			if (c == '\0')
+				break;
+		}
+
+		return i;
 	}
-	else if (fd >= 3)
-	{
-		// file 찾기
-		struct file *file = *(curr->fdt + fd);
-		if (file == NULL)
-			return -1;
-		bytes = file_read(file, buffer, length);
-	}
+	// 그 외의 경우
+	if (fd < 3) // stdout, stderr를 읽으려고 할 경우 & fd가 음수일 경우
+		return -1;
+
+	struct file *file = process_get_file(fd);
+	off_t bytes = -1;
+
+	if (file == NULL) // 파일이 비어있을 경우
+		return -1;
+
+	lock_acquire(&filesys_lock);
+	bytes = file_read(file, buffer, length);
+	lock_release(&filesys_lock);
 
 	return bytes;
+
+	// ---------------------------29
+	// if (fd == 0)
+	// 	return;
+	// check_address(buffer);
+
+	// struct thread *curr = thread_current();
+	// int bytes = 0;
+
+	// if (fd == 0)
+	// {
+	// 	bytes = input_getc();
+	// }
+	// else if (fd >= 3)
+	// {
+	// 	// file 찾기
+	// 	struct file *file = *(curr->fdt + fd);
+	// 	if (file == NULL)
+	// 		return -1;
+	// 	bytes = file_read(file, buffer, length);
+	// }
+
+	// return bytes;
 }
 
 int write(int fd, const void *buffer, unsigned length) // 열린 파일 데이터 기록 sys-call
@@ -335,6 +338,41 @@ int write(int fd, const void *buffer, unsigned length) // 열린 파일 데이�
 	lock_release(&filesys_lock);
 
 	return bytes;
+	// check_address(buffer);
+
+	// off_t bytes = -1;
+	// ------
+	// if (fd <= 0) // stdin에 쓰려고 할 경우 & fd 음수일 경우
+	// 	return -1;
+
+	// if (fd < 3)
+	// { // 1(stdout) * 2(stderr) -> console로 출력
+	// 	putbuf(buffer, length);
+	// 	return length;
+	// }
+	// stdin (fd == 0) 또는 음수일 경우 에러 반환
+	// or-------
+	// if (fd == 0 || fd < 0)
+	// 	return -1;
+
+	// // stdout (fd == 1) 또는 stderr (fd == 2)로의 출력 처리
+	// if (fd == 1 || fd == 2)
+	// {
+	// 	putbuf(buffer, length); // 콘솔에 출력
+	// 	return length;			// 성공적으로 출력한 바이트 수 반환
+	// }
+
+	// struct file *file = process_get_file(fd);
+
+	// if (file == NULL)
+	// 	return -1;
+
+	// lock_acquire(&filesys_lock);
+	// bytes = file_write(file, buffer, length);
+	// lock_release(&filesys_lock);
+
+	// return bytes;
+	// ------
 }
 
 void seek(int fd, unsigned position)
@@ -398,18 +436,18 @@ int exec(const char *cmd_line)
 {
 	check_address(cmd_line);
 
-    off_t size = strlen(cmd_line) + 1;
-    char *cmd_copy = palloc_get_page(PAL_ZERO);
+	off_t size = strlen(cmd_line) + 1;
+	char *cmd_copy = palloc_get_page(PAL_ZERO);
 
-    if (cmd_copy == NULL)
-        return -1;
+	if (cmd_copy == NULL)
+		return -1;
 
-    memcpy(cmd_copy, cmd_line, size);
+	memcpy(cmd_copy, cmd_line, size);
 
-    if (process_exec(cmd_copy) == -1)
-        return -1;
+	if (process_exec(cmd_copy) == -1)
+		return -1;
 
-    return 0;  // process_exec 성공시 리턴 값 없음 (do_iret)
+	return 0; // process_exec 성공시 리턴 값 없음 (do_iret)
 }
 
 int wait(pid_t tid)

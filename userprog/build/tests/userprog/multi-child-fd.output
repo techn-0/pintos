@@ -21,14 +21,16 @@ Executing 'multi-child-fd':
 (child-close) read of 373 bytes at offset 0 in "sample.txt" returned 18446744073709551615: FAILED
 child-close: exit(1)
 (multi-child-fd) wait(exec()) = 1
-multi-child-fd: exit(-1)
+(multi-child-fd) verified contents of "sample.txt"
+(multi-child-fd) end
+multi-child-fd: exit(0)
 Execution of 'multi-child-fd' complete.
-Timer: 64 ticks
-Thread: 37 idle ticks, 23 kernel ticks, 4 user ticks
+Timer: 66 ticks
+Thread: 40 idle ticks, 23 kernel ticks, 3 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 202 reads, 488 writes
+hd0:1: 203 reads, 488 writes
 hd1:0: 220 reads, 0 writes
-Console: 1276 characters output
+Console: 1347 characters output
 Keyboard: 0 keys pressed
 Exception: 0 page faults
 Powering off...

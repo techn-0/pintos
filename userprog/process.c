@@ -230,24 +230,22 @@ int process_exec(void *f_name)
 
 	// 휘건 추가
 	char *ptr, *arg;
-	int argc = 0;
-	char *argv[64];
+	int arg_cnt = 0;
+	char *arg_list[32];
 
 	for (arg = strtok_r(file_name, " ", &ptr); arg != NULL; arg = strtok_r(NULL, " ", &ptr))
-		argv[argc++] = arg;
+		arg_list[arg_cnt++] = arg;
 
 	/* And then load the binary */
 	success = load(file_name, &_if);
 
+	/** project2-Command Line Parsing */
+	argument_stack_for_user(arg_list, arg_cnt, &_if);
+
 	/* If load failed, quit. */
+	palloc_free_page(file_name);
 	if (!success)
 		return -1;
-
-	argument_stack_for_user(argv, argc, &_if);
-
-	palloc_free_page(file_name);
-
-	// hex_dump(if_.rsp, if_.rsp, USER_STACK - if_.rsp, true); //디버깅용
 
 	/* Start switched process. */
 	do_iret(&_if);
@@ -285,37 +283,66 @@ int process_exec(void *f_name)
 // 휘건 추가
 void argument_stack_for_user(char **argv, int argc, struct intr_frame *if_)
 {
-	for (int i = argc - 1; i >= 0; i--) // srgc는 string 갯수, -1은 나중에 센티넬 넣어야해서
+	char *arg_addr[100];
+	int argv_len;
+
+	for (int i = argc - 1; i >= 0; i--)
 	{
-		int N = strlen(argv[i]) + 1;  // + 1은 '\0' 인식을 위해 *TS: 괄호 안에 + 1 을 해서 해메이고있었음
-		if_->rsp -= N;				  // 사이즈만큼 빼줌
-		memcpy(if_->rsp, argv[i], N); // 뒤에서부터 정보 넣음 (처음부분은 'bar\0' 들어감)
-		argv[i] = (char *)if_->rsp;	  // string의 주소 기억
+		argv_len = strlen(argv[i]) + 1;
+		if_->rsp -= argv_len;
+		memcpy(if_->rsp, argv[i], argv_len);
+		arg_addr[i] = if_->rsp;
 	}
 
-	// 8의 배수로 맞추기 위해 padding 넣어야 함
-	if (if_->rsp % 8)
-	{
-		int padding = if_->rsp % 8;
-		if_->rsp -= padding;
-		memset(if_->rsp, 0, padding);
-	}
+	while (if_->rsp % 8)
+		*(uint8_t *)(--if_->rsp) = 0;
 
 	if_->rsp -= 8;
-	memset(if_->rsp, 0, 8); // NULL 포인터 추가
+	memset(if_->rsp, 0, sizeof(char *));
 
 	for (int i = argc - 1; i >= 0; i--)
 	{
 		if_->rsp -= 8;
-		memcpy(if_->rsp, &argv[i], 8); // 각 인자의 주소 저장
+		memcpy(if_->rsp, &arg_addr[i], sizeof(char *));
 	}
 
-	if_->rsp -= 8;
-	memset(if_->rsp, 0, 8); // NULL 포인터 추가
+	if_->rsp = if_->rsp - 8;
+	memset(if_->rsp, 0, sizeof(void *));
 
-	// 레지스터 설정
-	if_->R.rdi = argc;		   // 인자 개수
-	if_->R.rsi = if_->rsp + 8; // 인자 주소 (마지막 NULL 포인터 고려)
+	if_->R.rdi = argc;
+	if_->R.rsi = if_->rsp + 8;
+
+	// for (int i = argc - 1; i >= 0; i--) // srgc는 string 갯수, -1은 나중에 센티넬 넣어야해서
+	// {
+	// 	int N = strlen(argv[i]) + 1;  // + 1은 '\0' 인식을 위해 *TS: 괄호 안에 + 1 을 해서 해메이고있었음
+	// 	if_->rsp -= N;				  // 사이즈만큼 빼줌
+	// 	memcpy(if_->rsp, argv[i], N); // 뒤에서부터 정보 넣음 (처음부분은 'bar\0' 들어감)
+	// 	argv[i] = (char *)if_->rsp;	  // string의 주소 기억
+	// }
+
+	// // 8의 배수로 맞추기 위해 padding 넣어야 함
+	// if (if_->rsp % 8)
+	// {
+	// 	int padding = if_->rsp % 8;
+	// 	if_->rsp -= padding;
+	// 	memset(if_->rsp, 0, padding);
+	// }
+
+	// if_->rsp -= 8;
+	// memset(if_->rsp, 0, 8); // NULL 포인터 추가
+
+	// for (int i = argc - 1; i >= 0; i--)
+	// {
+	// 	if_->rsp -= 8;
+	// 	memcpy(if_->rsp, &argv[i], 8); // 각 인자의 주소 저장
+	// }
+
+	// if_->rsp -= 8;
+	// memset(if_->rsp, 0, 8); // NULL 포인터 추가
+
+	// // 레지스터 설정
+	// if_->R.rdi = argc;		   // 인자 개수
+	// if_->R.rsi = if_->rsp + 8; // 인자 주소 (마지막 NULL 포인터 고려)
 }
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -505,6 +532,9 @@ load(const char *file_name, struct intr_frame *if_)
 		goto done;
 	}
 
+	t->runn_file = file;
+	file_deny_write(file); /** Project 2: Denying Writes to Executables */
+
 	/* Read and verify executable header. */
 	if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 0x3E // amd64
 		|| ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Phdr) || ehdr.e_phnum > 1024)
@@ -585,7 +615,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close(file);
+	// file_close(file);
 	return success;
 }
 
@@ -747,7 +777,8 @@ struct file *process_get_file(int fd)
 {
 	struct thread *curr = thread_current();
 
-	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+	if (fd >= FDCOUNT_LIMIT)
+		// if (fd < 0 || fd >= FDCOUNT_LIMIT)
 		return NULL;
 
 	return curr->fdt[fd];
@@ -783,18 +814,18 @@ struct thread *get_child_process(int pid)
 
 // -----------------------
 // 현재 스레드 fdt에 파일 추가
-// int process_add_file(struct file *f)
-// {
-// 	struct thread *curr = thread_current();
-// 	struct file **fdt = curr->fdt;
+int process_add_file(struct file *f)
+{
+	struct thread *curr = thread_current();
+	struct file **fdt = curr->fdt;
 
-// 	if (curr->fd_idx >= FDCOUNT_LIMIT)
-// 		return -1;
+	if (curr->fd_idx >= FDCOUNT_LIMIT)
+		return -1;
 
-// 	fdt[curr->fd_idx++] = f;
+	fdt[curr->fd_idx++] = f;
 
-// 	return curr->fd_idx - 1;
-// }
+	return curr->fd_idx - 1;
+}
 
 int add_file_to_fdt(struct file *file)
 {

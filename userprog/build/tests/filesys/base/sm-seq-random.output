@@ -16,14 +16,19 @@ Executing 'sm-seq-random':
 (sm-seq-random) create "nibble"
 (sm-seq-random) open "nibble"
 (sm-seq-random) writing "nibble"
-sm-seq-random: exit(-1)
+(sm-seq-random) close "nibble"
+(sm-seq-random) open "nibble" for verification
+(sm-seq-random) verified contents of "nibble"
+(sm-seq-random) close "nibble"
+(sm-seq-random) end
+sm-seq-random: exit(0)
 Execution of 'sm-seq-random' complete.
-Timer: 58 ticks
-Thread: 34 idle ticks, 24 kernel ticks, 1 user ticks
+Timer: 60 ticks
+Thread: 31 idle ticks, 25 kernel ticks, 4 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 107 reads, 266 writes
+hd0:1: 140 reads, 287 writes
 hd1:0: 107 reads, 0 writes
-Console: 949 characters output
+Console: 1123 characters output
 Keyboard: 0 keys pressed
 Exception: 0 page faults
 Powering off...

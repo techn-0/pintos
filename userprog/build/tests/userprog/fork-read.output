@@ -15,14 +15,19 @@ Putting 'sample.txt' into the file system...
 Executing 'fork-read':
 (fork-read) begin
 (fork-read) open "sample.txt"
-fork-read: exit(-1)
+(fork-read) child run
+(fork-read) read() returned -1 instead of 353: FAILED
+child: exit(1)
+(fork-read) Parent success
+(fork-read) end
+fork-read: exit(0)
 Execution of 'fork-read' complete.
-Timer: 58 ticks
-Thread: 33 idle ticks, 23 kernel ticks, 2 user ticks
+Timer: 59 ticks
+Thread: 32 idle ticks, 25 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 115 reads, 260 writes
+hd0:1: 117 reads, 260 writes
 hd1:0: 111 reads, 0 writes
-Console: 916 characters output
+Console: 1049 characters output
 Keyboard: 0 keys pressed
 Exception: 0 page faults
 Powering off...

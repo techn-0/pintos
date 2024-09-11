@@ -237,9 +237,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 
 	/* Add to run queue. */
 	thread_unblock(t);
-	check_preemption(); // 추가
+	// check_preemption(); // 추가
 
-	if(t->priority > thread_current()->priority)
+	if (t->priority > thread_current()->priority)
 		thread_yield();
 
 	return tid;
@@ -503,7 +503,7 @@ static void init_thread(struct thread *t, const char *name, int priority)
 	t->magic = THREAD_MAGIC;
 
 	// 추가 AS
-	t->init_priority = t->priority;
+	t->init_priority = t->priority; // original_priority
 	t->niceness = NICE_DEFAULT;
 	t->recent_cpu = RECENT_CPU_DEFAULT;
 

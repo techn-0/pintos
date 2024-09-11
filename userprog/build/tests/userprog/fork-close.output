@@ -18,14 +18,16 @@ Executing 'fork-close':
 (fork-close) child run
 (fork-close) end
 child: exit(0)
-fork-close: exit(-1)
+(fork-close) Parent success
+(fork-close) end
+fork-close: exit(0)
 Execution of 'fork-close' complete.
 Timer: 59 ticks
-Thread: 34 idle ticks, 24 kernel ticks, 1 user ticks
+Thread: 31 idle ticks, 26 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 121 reads, 258 writes
+hd0:1: 122 reads, 258 writes
 hd1:0: 110 reads, 0 writes
-Console: 979 characters output
+Console: 1023 characters output
 Keyboard: 0 keys pressed
 Exception: 0 page faults
 Powering off...

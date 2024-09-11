@@ -15,14 +15,15 @@ Putting 'sample.txt' into the file system...
 Executing 'write-boundary':
 (write-boundary) begin
 (write-boundary) open "sample.txt"
-write-boundary: exit(-1)
+(write-boundary) end
+write-boundary: exit(0)
 Execution of 'write-boundary' complete.
-Timer: 58 ticks
-Thread: 34 idle ticks, 24 kernel ticks, 0 user ticks
+Timer: 59 ticks
+Thread: 33 idle ticks, 24 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 119 reads, 256 writes
+hd0:1: 120 reads, 257 writes
 hd1:0: 109 reads, 0 writes
-Console: 956 characters output
+Console: 976 characters output
 Keyboard: 0 keys pressed
 Exception: 0 page faults
 Powering off...
