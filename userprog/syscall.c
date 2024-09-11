@@ -230,7 +230,7 @@ int open(const char *file) // 파일 열기 sys-call
 	{
 		struct thread *t = thread_current();
 		int fd;
-		for (fd = 3; fd < 32; fd++)
+		for (fd = 3; fd < 1024; fd++)
 		{
 			if (t->fdt[fd] == NULL)
 			{
