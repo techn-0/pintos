@@ -18,7 +18,7 @@ Executing 'sm-create':
 sm-create: exit(-1)
 Execution of 'sm-create' complete.
 Timer: 58 ticks
-Thread: 34 idle ticks, 23 kernel ticks, 1 user ticks
+Thread: 34 idle ticks, 22 kernel ticks, 2 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 107 reads, 266 writes
 hd1:0: 107 reads, 0 writes

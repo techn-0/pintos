@@ -18,8 +18,8 @@ Executing 'rox-child':
 (rox-child) read "child-rox"
 rox-child: exit(-1)
 Execution of 'rox-child' complete.
-Timer: 66 ticks
-Thread: 38 idle ticks, 27 kernel ticks, 1 user ticks
+Timer: 63 ticks
+Thread: 35 idle ticks, 27 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 112 reads, 478 writes
 hd1:0: 220 reads, 0 writes

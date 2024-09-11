@@ -239,6 +239,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 	thread_unblock(t);
 	check_preemption(); // 추가
 
+	if(t->priority > thread_current()->priority)
+		thread_yield();
+
 	return tid;
 }
 
@@ -491,12 +494,14 @@ static void init_thread(struct thread *t, const char *name, int priority)
 		t->priority = priority; // 원래 방식
 	}
 
-	t->magic = THREAD_MAGIC;
 	// 추가
 	t->init_priority = priority;
 
 	t->wait_on_lock = NULL;
 	list_init(&(t->donations));
+
+	t->magic = THREAD_MAGIC;
+
 	// 추가 AS
 	t->init_priority = t->priority;
 	t->niceness = NICE_DEFAULT;

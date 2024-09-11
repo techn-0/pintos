@@ -157,7 +157,7 @@ __do_fork(void *aux)
 	struct thread *parent = (struct thread *)aux;
 	struct thread *current = thread_current();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
-	struct intr_frame *parent_if = &parent->parent_if; // 휘건 추가
+	struct intr_frame *parent_if = &parent->parent_if;
 	bool succ = true;
 
 	/* 1. Read the cpu context to local stack. */
@@ -202,7 +202,8 @@ __do_fork(void *aux)
 
 	/* Finally, switch to the newly created process. */
 	if (succ)
-		do_iret(&if_);
+		do_iret(&if_); // 정상 종료 시 자식 Process를 수행하러 감
+
 error:
 	sema_up(&current->fork_sema); // 복제에 실패했으므로 현재 fork용 sema unblock
 	exit(TID_ERROR);
@@ -228,33 +229,57 @@ int process_exec(void *f_name)
 	process_cleanup();
 
 	// 휘건 추가
+	char *ptr, *arg;
 	int argc = 0;
 	char *argv[64];
-	char *ret_ptr, *next_ptr;
 
-	ret_ptr = strtok_r(file_name, " ", &next_ptr);
-	while (ret_ptr)
-	{
-		argv[argc++] = ret_ptr;
-		ret_ptr = strtok_r(NULL, " ", &next_ptr);
-	}
+	for (arg = strtok_r(file_name, " ", &ptr); arg != NULL; arg = strtok_r(NULL, " ", &ptr))
+		argv[argc++] = arg;
 
 	/* And then load the binary */
-	success = load(file_name, &_if); // 실행할 프로그램의 바이너리 파일을 메모리에 적재
-
-	// 휘건 추가
-	argument_stack_for_user(argv, argc, &_if);
+	success = load(file_name, &_if);
 
 	/* If load failed, quit. */
-	palloc_free_page(file_name);
 	if (!success)
 		return -1;
 
-	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true); // 디버깅을 위해 추가
+	argument_stack_for_user(argv, argc, &_if);
+
+	palloc_free_page(file_name);
+
+	// hex_dump(if_.rsp, if_.rsp, USER_STACK - if_.rsp, true); //디버깅용
 
 	/* Start switched process. */
 	do_iret(&_if);
 	NOT_REACHED();
+	// --------------------------
+	// int argc = 0;
+	// char *argv[64];
+	// char *ret_ptr, *next_ptr;
+
+	// ret_ptr = strtok_r(file_name, " ", &next_ptr);
+	// while (ret_ptr)
+	// {
+	// 	argv[argc++] = ret_ptr;
+	// 	ret_ptr = strtok_r(NULL, " ", &next_ptr);
+	// }
+
+	// /* And then load the binary */
+	// success = load(file_name, &_if); // 실행할 프로그램의 바이너리 파일을 메모리에 적재
+
+	// // 휘건 추가
+	// argument_stack_for_user(argv, argc, &_if);
+
+	// /* If load failed, quit. */
+	// palloc_free_page(file_name);
+	// if (!success)
+	// 	return -1;
+
+	// // hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true); // 디버깅을 위해 추가
+
+	// /* Start switched process. */
+	// do_iret(&_if);
+	// NOT_REACHED();
 }
 
 // 휘건 추가
@@ -312,7 +337,6 @@ int process_wait(tid_t child_tid UNUSED)
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	struct thread *curr = thread_current ();
 	struct thread *child = get_child_process(child_tid);
 	if (child == NULL)
 		return -1;

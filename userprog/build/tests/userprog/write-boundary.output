@@ -17,8 +17,8 @@ Executing 'write-boundary':
 (write-boundary) open "sample.txt"
 write-boundary: exit(-1)
 Execution of 'write-boundary' complete.
-Timer: 60 ticks
-Thread: 34 idle ticks, 26 kernel ticks, 1 user ticks
+Timer: 58 ticks
+Thread: 34 idle ticks, 24 kernel ticks, 0 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 119 reads, 256 writes
 hd1:0: 109 reads, 0 writes

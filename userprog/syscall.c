@@ -12,12 +12,15 @@
 #include "filesys/file.h"
 #include "threads/palloc.h"
 #include <string.h>
+
+#include "userprog/process.h"
 typedef int pid_t;
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
 // 휘건 추가
 struct lock filesys_lock; // 파일 읽기/쓰기 용 lock
+// check_vlid_fd(int fd);
 // typedef int pid_t;
 // typedef int32_t off_t;
 // #define PAL_ZERO 002
@@ -61,49 +64,87 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	switch (sys_number)
 	{
 	case SYS_HALT:
+	{
 		halt();
 		break;
+	}
 	case SYS_EXIT:
+	{
 		exit(f->R.rdi);
 		break;
+	}
 	case SYS_FORK:
+	{
 		f->R.rax = fork(f->R.rdi);
 		break;
+	}
 	case SYS_EXEC:
+	{
 		f->R.rax = exec(f->R.rdi);
 		break;
+	}
 	case SYS_WAIT:
+	{
 		f->R.rax = process_wait(f->R.rdi);
 		break;
+	}
 	case SYS_CREATE:
+	{
 		f->R.rax = create(f->R.rdi, f->R.rsi);
 		break;
+	}
 	case SYS_REMOVE:
+	{
 		f->R.rax = remove(f->R.rdi);
 		break;
+	}
 	case SYS_OPEN:
+	{
 		f->R.rax = open(f->R.rdi);
 		break;
+	}
 	case SYS_FILESIZE:
+	{
 		f->R.rax = filesize(f->R.rdi);
 		break;
+	}
 	case SYS_READ:
+	{
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
+	}
 	case SYS_WRITE:
+	{
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
+	}
 	case SYS_SEEK:
+	{
 		seek(f->R.rdi, f->R.rsi);
 		break;
+	}
 	case SYS_TELL:
+	{
 		f->R.rax = tell(f->R.rdi);
 		break;
+	}
 	case SYS_CLOSE:
+	{
 		close(f->R.rdi);
 		break;
+		// int fd = f->R.rdi;
+		// if (!check_vlid_fd(fd))
+		// 	break;
+
+		// struct file *close_file = thread_current()->fdt[fd];
+		// file_close(close_file);
+		// thread_current()->fdt[fd] = NULL;
+		// break;
+	}
 	default:
+	{
 		exit(-1);
+	}
 	}
 	// printf ("system call!\n");
 	// thread_exit ();
@@ -212,37 +253,59 @@ int filesize(int fd) // 파일 크기 sys-call
 
 int read(int fd, void *buffer, unsigned length) // 열린 파일의 데이터를 읽기 sys-call
 {
-	check_address(buffer);
+	// 	check_address(buffer);
+
+	// 	if (fd == 0)
+	// 	{			   // 0(stdin) -> keyboard로 직접 입력
+	// 		int i = 0; // 쓰레기 값 return 방지
+	// 		char c;
+	// 		unsigned char *buf = buffer;
+
+	// 		for (; i < length; i++)
+	// 		{
+	// 			c = input_getc();
+	// 			*buf++ = c;
+	// 			if (c == '\0')
+	// 				break;
+	// 		}
+
+	// 		return i;
+	// 	}
+	// 	// 그 외의 경우
+	// 	if (fd < 3) // stdout, stderr를 읽으려고 할 경우 & fd가 음수일 경우
+	// 		return -1;
+
+	// 	struct file *file = process_get_file(fd);
+	// 	off_t bytes = -1;
+
+	// 	if (file == NULL) // 파일이 비어있을 경우
+	// 		return -1;
+
+	// 	lock_acquire(&filesys_lock);
+	// 	bytes = file_read(file, buffer, length);
+	// 	lock_release(&filesys_lock);
+
+	// 	return bytes;
 
 	if (fd == 0)
-	{			   // 0(stdin) -> keyboard로 직접 입력
-		int i = 0; // 쓰레기 값 return 방지
-		char c;
-		unsigned char *buf = buffer;
+		return;
+	check_address(buffer);
 
-		for (; i < length; i++)
-		{
-			c = input_getc();
-			*buf++ = c;
-			if (c == '\0')
-				break;
-		}
+	struct thread *curr = thread_current();
+	int bytes = 0;
 
-		return i;
+	if (fd == 0)
+	{
+		bytes = input_getc();
 	}
-	// 그 외의 경우
-	if (fd < 3) // stdout, stderr를 읽으려고 할 경우 & fd가 음수일 경우
-		return -1;
-
-	struct file *file = process_get_file(fd);
-	off_t bytes = -1;
-
-	if (file == NULL) // 파일이 비어있을 경우
-		return -1;
-
-	lock_acquire(&filesys_lock);
-	bytes = file_read(file, buffer, length);
-	lock_release(&filesys_lock);
+	else if (fd >= 3)
+	{
+		// file 찾기
+		struct file *file = *(curr->fdt + fd);
+		if (file == NULL)
+			return -1;
+		bytes = file_read(file, buffer, length);
+	}
 
 	return bytes;
 }
@@ -294,8 +357,19 @@ int tell(int fd)
 	return file_tell(file);
 }
 
+//----
+// check_vlid_fd(int fd)
+// {
+// 	for (int i = 0; i < 64; i++)
+// 	{
+// 		if (fd == i && thread_current()->fdt[i] != NULL)
+// 			return true;
+// 	}
+// 	return false;
+// }
 void close(int fd) // 파일 닫기
 {
+	// origin
 	struct file *file = process_get_file(fd);
 
 	if (fd < 3 || file == NULL)
@@ -304,6 +378,13 @@ void close(int fd) // 파일 닫기
 	process_close_file(fd);
 
 	file_close(file);
+	//----------------------------------------------
+	// struct thread *cur = thread_current();
+	// if (cur->fdt[fd] != NULL)
+	// {
+	// 	file_close(cur->fdt[fd]);
+	// 	cur->fdt[fd] = NULL;
+	// }
 }
 
 pid_t fork(const char *thread_name)
@@ -317,18 +398,18 @@ int exec(const char *cmd_line)
 {
 	check_address(cmd_line);
 
-	off_t size = strlen(cmd_line) + 1;
-	char *cmd_copy = palloc_get_page(PAL_ZERO);
+    off_t size = strlen(cmd_line) + 1;
+    char *cmd_copy = palloc_get_page(PAL_ZERO);
 
-	if (cmd_copy == NULL)
-		return -1;
+    if (cmd_copy == NULL)
+        return -1;
 
-	memcpy(cmd_copy, cmd_line, size);
+    memcpy(cmd_copy, cmd_line, size);
 
-	if (process_exec(cmd_copy) == -1)
-		return -1;
+    if (process_exec(cmd_copy) == -1)
+        return -1;
 
-	return 0; // process_exec 성공시 리턴 값 없음 (do_iret)
+    return 0;  // process_exec 성공시 리턴 값 없음 (do_iret)
 }
 
 int wait(pid_t tid)
